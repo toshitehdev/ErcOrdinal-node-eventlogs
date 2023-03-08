@@ -1,3 +1,7 @@
 /node_modules
 .env
+.env.localnode
+.env.remotenode
+.env.testnet
+.env.mainnet
 key.json

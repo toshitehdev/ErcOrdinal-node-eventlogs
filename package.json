@@ -5,11 +5,14 @@
   "license": "MIT",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start-localnode": "NODE_ENV=localnode nodemon server.js",
+    "start-remotenode": "NODE_ENV=remotenode nodemon server.js",
+    "start-testnet": "nodemon server.js",
+    "start-mainnet": "nodemon server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
+    "custom-env": "^2.0.1",
     "ethers": "^6.1.0",
     "express": "^4.18.2",
     "firebase-admin": "^11.5.0"
