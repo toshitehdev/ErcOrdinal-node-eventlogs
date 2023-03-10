@@ -5,9 +5,10 @@ const { contractABI } = require("./constant");
 const { db } = require("./config");
 require("custom-env").env(true);
 
-const contract_address = process.env.CONTRACT_ADDRESS;
-const provider = new ethers.getDefaultProvider(process.env.PROVIDER);
+const contract_address = "0xF85895D097B2C25946BB95C4d11E2F3c035F8f0C";
+const provider = new ethers.getDefaultProvider("http://127.0.0.1:8545/");
 const contract = new ethers.Contract(contract_address, contractABI, provider);
+provider.pollingInterval = 1000;
 
 const app = express();
 
@@ -71,7 +72,6 @@ const uu = async () => {
 
 uu();
 
-//get all eligibleids
 app.get("/logs", async (req, res) => {
   try {
     const idRef = db.collection("EligibleIds");
@@ -85,9 +85,13 @@ app.get("/logs", async (req, res) => {
     res.send(error);
   }
 });
-//get all the logs
-app.get("/logs", async (req, res) => {
+//wait to render claim
+app.get("/claim", async (req, res) => {
   try {
+    //update existing id to is_claimed = true
+    await db.collection("w").doc("p").set({ is_claimed: true });
+    await db.collection("x").doc("y").set({ is_claimed: true });
+
     const idRef = db.collection("EligibleIds");
     const response = await idRef.get();
     const respArr = [];
@@ -95,6 +99,7 @@ app.get("/logs", async (req, res) => {
       respArr.push(doc.data());
     });
     res.send(respArr);
+    console.log("updated");
   } catch (error) {
     res.send(error);
   }
