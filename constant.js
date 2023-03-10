@@ -3,7 +3,12 @@ const contractABI = [
     inputs: [
       {
         internalType: "address",
-        name: "_genesis_address",
+        name: "_dev1",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_dev2",
         type: "address",
       },
       {
@@ -321,12 +326,12 @@ const contractABI = [
   },
   {
     inputs: [],
-    name: "genesis_address",
+    name: "free_mint_allocation",
     outputs: [
       {
-        internalType: "address",
+        internalType: "uint256",
         name: "",
-        type: "address",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -735,11 +740,22 @@ const contractABI = [
   },
   {
     inputs: [],
+    name: "unclaimed_bounty",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "withdrawMintSale",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
 ];
-
-module.exports = { contractABI };
