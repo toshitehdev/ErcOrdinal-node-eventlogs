@@ -759,3 +759,5 @@ const contractABI = [
     type: "function",
   },
 ];
+
+module.exports = { contractABI };
