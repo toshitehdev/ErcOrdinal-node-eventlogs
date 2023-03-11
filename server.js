@@ -19,7 +19,7 @@ app.use(
     origin: "*",
   })
 );
-
+app.use(express.json());
 const uu = async () => {
   contract.on("EligibleIds", (id, eligible_prize) => {
     const obj = {
@@ -72,7 +72,7 @@ const uu = async () => {
 
 uu();
 
-app.get("/logs", async (req, res) => {
+app.post("/logs", async (req, res) => {
   try {
     const idRef = db.collection(process.env.COLLECTION);
     const response = await idRef.get();
@@ -86,11 +86,21 @@ app.get("/logs", async (req, res) => {
   }
 });
 //wait to render claim
-app.get("/claim", async (req, res) => {
+app.post("/claim", async (req, res) => {
   try {
-    //update existing id to is_claimed = true
-    await db.collection("w").doc("p").set({ is_claimed: true });
-    await db.collection("x").doc("y").set({ is_claimed: true });
+    //update existing firebase id, after read on-chain data
+    const updatedIdOnChain = await contract.idIsEligible(req.body.id);
+    const obj = {
+      id: req.body.id,
+      is_eligible: updatedIdOnChain.is_eligible,
+      prize_amount: ethers.toNumber(updatedIdOnChain.prize_amount),
+      is_claimed: updatedIdOnChain.is_claimed,
+      from_claiming: updatedIdOnChain.from_claiming,
+    };
+    await db
+      .collection(process.env.COLLECTION)
+      .doc(String(req.body.id))
+      .update(obj);
 
     const idRef = db.collection(process.env.COLLECTION);
     const response = await idRef.get();
