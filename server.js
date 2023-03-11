@@ -5,8 +5,8 @@ const { contractABI } = require("./constant");
 const { db } = require("./config");
 require("custom-env").env(true);
 
-const contract_address = "0xF85895D097B2C25946BB95C4d11E2F3c035F8f0C";
-const provider = new ethers.getDefaultProvider("http://127.0.0.1:8545/");
+const contract_address = process.env.CONTRACT_ADDRESS;
+const provider = new ethers.getDefaultProvider(process.env.PROVIDER);
 const contract = new ethers.Contract(contract_address, contractABI, provider);
 provider.pollingInterval = 1000;
 
@@ -29,10 +29,10 @@ const uu = async () => {
       is_claimed: eligible_prize.is_claimed,
       from_claiming: eligible_prize.from_claiming,
     };
-    console.log(obj);
+    //console.log(obj);
     //get all eligible ids
     //uniswap resurrect use the same event
-    db.collection("EligibleIds")
+    db.collection(process.env.COLLECTION)
       .doc(String(ethers.toNumber(id)))
       .set(obj)
       .then(() => {
@@ -43,9 +43,9 @@ const uu = async () => {
       });
   });
 
-  contract.on("UnclaimedBounty", (id) => {
+  contract.on("ExpiredBounty", (id) => {
     //update existing id to from_claiming = true
-    db.collection("EligibleIds")
+    db.collection(process.env.COLLECTION)
       .doc(String(ethers.toNumber(id)))
       .update({ from_claiming: true })
       .then(() => {
@@ -58,7 +58,7 @@ const uu = async () => {
 
   contract.on("ClaimBounty", (id, amount) => {
     //update existing id to is_claimed = true
-    db.collection("EligibleIds")
+    db.collection(process.env.COLLECTION)
       .doc(String(ethers.toNumber(id)))
       .update({ is_claimed: true })
       .then(() => {
@@ -74,7 +74,7 @@ uu();
 
 app.get("/logs", async (req, res) => {
   try {
-    const idRef = db.collection("EligibleIds");
+    const idRef = db.collection(process.env.COLLECTION);
     const response = await idRef.get();
     const respArr = [];
     response.forEach((doc) => {
@@ -92,7 +92,7 @@ app.get("/claim", async (req, res) => {
     await db.collection("w").doc("p").set({ is_claimed: true });
     await db.collection("x").doc("y").set({ is_claimed: true });
 
-    const idRef = db.collection("EligibleIds");
+    const idRef = db.collection(process.env.COLLECTION);
     const response = await idRef.get();
     const respArr = [];
     response.forEach((doc) => {
@@ -107,7 +107,7 @@ app.get("/claim", async (req, res) => {
 //get only the unclaimed id
 app.get("/logs/unclaimed", async (req, res) => {
   try {
-    const idRef = db.collection("EligibleIds");
+    const idRef = db.collection(process.env.COLLECTION);
     const response = await idRef.get();
     const respArr = [];
     response.forEach((doc) => {
@@ -123,7 +123,7 @@ app.get("/logs/unclaimed", async (req, res) => {
 //get only the claimed id
 app.get("/logs/claimed", async (req, res) => {
   try {
-    const idRef = db.collection("EligibleIds");
+    const idRef = db.collection(process.env.COLLECTION);
     const response = await idRef.get();
     const respArr = [];
     response.forEach((doc) => {
@@ -137,13 +137,53 @@ app.get("/logs/claimed", async (req, res) => {
 //get only the the expired ids
 app.get("/logs/expired", async (req, res) => {
   try {
-    const idRef = db.collection("EligibleIds");
+    const idRef = db.collection(process.env.COLLECTION);
     const response = await idRef.get();
     const respArr = [];
     response.forEach((doc) => {
       if (doc.data().from_claiming) respArr.push(doc.data());
     });
     res.send(respArr);
+  } catch (error) {
+    res.send(error);
+  }
+});
+
+//force update in case something wrong happen to this logger
+app.get("/forceupdate", async (req, res) => {
+  try {
+    const filter = contract.filters.EligibleIds();
+    const events = await contract.queryFilter(filter);
+    const eventIds = events.map((item, idx) => {
+      const logs = contract.interface.parseLog({
+        data: item.data,
+        topics: item.topics,
+      });
+      return ethers.toNumber(logs.args.id);
+    });
+
+    eventIds.forEach(async (item, index) => {
+      const getDataObject = await contract.idIsEligible(item);
+      const obj = {
+        id: item,
+        is_eligible: getDataObject.is_eligible,
+        prize_amount: ethers.toNumber(getDataObject.prize_amount),
+        is_claimed: getDataObject.is_claimed,
+        from_claiming: getDataObject.from_claiming,
+      };
+      await db
+        .collection(process.env.COLLECTION)
+        .doc(String(item))
+        .set(obj)
+        .then(() => {
+          console.log("data created");
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    });
+
+    res.send("ok");
   } catch (error) {
     res.send(error);
   }
